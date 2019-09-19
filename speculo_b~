@@ -89,17 +89,6 @@ rem_dotfiles()
     ssh ${HOSTNAME} -qt 'rm -r ${config[dotdir]}'
 }
 
-rem_routine()
-{
-    if rem_dotfiles
-    then
-        echo "Files removed!"
-    elif rem_dotfiles
-        echo "Files removed after 2 tries."
-    else
-        echo "Could not remove dot files, please manually clean up"
-    fi
-}
 
 spec_oscheck()
 {
@@ -122,47 +111,67 @@ spec_the_thing()
     ssh ${HOSTNAME} -t "bash --rcfile ${config[dotrc]}" || echo -e "\e[31mFailed to SSH or Rsync to system!\e[m"
 }
 
-
 if $(exit ${config[soscheck]})
 then 
     spec_oscheck
     if [[ CORE_EXIT == 0 ]]
     then
-        
-        echo "System is Solaris, default SSH used."
-        ssh ${HOSTNAME}
-   
-    elif [[ CORE_EXIT == 1 ]]
-        
-        echo "System is CentOS or Oracle Linux, rsync starting..."
-        spec_the_thing &&\
-        
-        if [[ ${config[sonoclean]} == 0 ]]
-        then
-            if parallel_lines
-            then
-                rem_routine
-            else
-                echo "Still logged in to ${HOSTNAME} elsewhere using ${0}, please log out and/or clean up manually!"
-            fi    
-        fi
-
-    else
-        echo "Unknown system, defualt SSH used."
+        echo "System is Solaris, default SSH being used"
         ssh ${HOSTNAME}
     fi
-else
-    spec_the_thing &&\
-
-    if $( exit ${config[sonoclean]})
-    then
-        if parallel_lines
-        then
-            rem_routine
-        else
-            echo "Still logged in to ${HOSTNAME} elsewhere using ${0}, please log out and/or clean up manually!"
-        fi
-    fi
-fi
 fi
 
+ # rsync -r ~/dotfiles/rsfiles ${HOSTNAME}:~/ &&\
+ # ssh ${HOSTNAME} -t 'bash --rcfile ./rsfiles/.rsrc' || echo -e "\e[31mCould Not SSH Into ${HOSTNAME}!\e[m"
+####^ the above starts the ssh session using the rsynced files as the bashrc... need to figure out the variables to get Vim working the way I want it.
+#        
+#        #prevent 's' from removing dot files if still logged in
+#        parallel_lines
+#        PL_STATUS=$?
+#
+#        if ! $(exit ${PL_STATUS})
+#        then
+#            rem_dotfiles #Clean up after ourselves
+#            STATUS=$?
+#        else
+#            echo "Still logged into server elsewhere. Either remove files manually or log out of other instances of S on ${HOSTNAME}!"
+#            STATUS=1
+#            exit 5
+#        fi
+#
+#        if  $(exit ${STATUS}) # https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function/43840545#43840545 
+#        then 
+#            echo -e "\e[1;32mSuccessfully Removed rsfiles\e[m" 
+#        else 
+#            rem_dotfiles
+#            STATUS=$?
+#            if $(exit ${STATUS})
+#            then
+#                echo -e "\e[33mSuccessfully removed dotfiles after second attempt\e[m"
+#            else
+#                echo -e "\e[31mFailed to remove dotfiles after second attempt\e[m"
+#            fi    
+#        fi
+#    elif [[ ${CORE_EXIT} == 0 ]] 
+#    then
+#        echo "System is Solaris, no Rsync for compatability"
+#        ssh ${HOSTNAME}
+#    else
+#        echo "Unable to determine host OS, no rsync for compatability"
+#        ssh ${HOSTNAME}
+#    fi
+#fi
+
+
+
+#core()
+#{
+#   case ${SOSCHECK} in 
+#    1)
+#        spec_oscheck
+#        ;;
+#    0)
+#        spec_noscheck
+#        ;;
+#    esac
+#}
