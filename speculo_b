@@ -1,0 +1,178 @@
+#!/bin/bash
+declare -A config #initialize associated array (keys can be anything)
+config=(
+    [dotdir]="~/dotfiles/"
+    [dotrc]="${config[dotdir]}/.bashrc"
+    [soscheck]="0"
+    [sonoclean]="0"
+    [soconf]="./speculo.conf"
+)
+
+HOSTNAME=${1}    
+so_config_parse()
+{
+    while read line
+    do
+        if echo ${line} | grep -Fq "=" 
+        then
+            valname=$(echo "${line}" | cut -d '=' -f 1)
+            config[$valname]=$(echo "${line}" | cut -d '=' -f 2-)
+        fi
+    done < ${config[soconf]
+}
+
+
+if [[ $@ !=~ \ -c\ ]] && [[ -f "${config[soconf]}" ]] # If -c isn't specified anywhere, import from default config if default file exists
+then
+    so_config_parse 
+fi
+
+
+
+plzhlp()
+{
+    echo << EOF
+    ${0} - Usage: 
+    ${0} [-h] HOSTNAME [-c config.file] [-d dotfiles_dir] [-r ./rc_file] [-no]
+        -c      Specify a different config file.  default: ./speculo.conf
+        
+        -h      Specify Hostname. If -h isn't supplied the FIRST positional argument is used
+        
+        -d      Specify a different dotfiles directory. default: ~/dotfiles/
+
+        -r      Specify a different rc file for baash. default: ~/dotfiles/.bashrc
+
+        -n      Don't remove dotfiles from remote server
+
+        -o      Check OS before trying to rsync, restricts attempts to just Oracle Linux and CentOS machines, otherwise
+                does basic SSH to system.
+EOF
+}
+
+#Define options to be used with command
+while getopts ':h:c:d:r:nlo' OPTION
+do
+        case $OPTION in
+        c)      ${config[soconf]}=${OPTARG}
+                so_config_parse
+                ;;
+        h)      HOSTNAME=${OPTARG}
+                ;;
+        d)      ${config[dotdir]}=${OPTARG}
+                ;;
+        r)      ${config[dotrc]}=${OPTARG}
+                ;;
+        n)      ${config[sonoclean]}=1
+                ;;
+        o)      ${config[soscheck]}=1
+                ;;
+        ?)      printf "Unknown Option" #What to do in unkown state
+                plzhlp
+                exit 3
+                ;;
+        *)      printf "Unknown State" #What to do in unkown state
+                plzhlp
+                exit 3
+                ;;
+        esac
+done
+
+
+
+parallel_lines()
+{
+    pgrep -a $0 -u ${USER} | grep ${HOSTNAME} | grep -qv $$
+}
+
+
+rem_dotfiles()
+{
+    ssh ${HOSTNAME} -qt 'rm -r ${config[dotdir]}'
+}
+
+
+spec_oscheck()
+{
+    # Exits 0 if system is Solaris, 1 if centos or oracle linux or 5 if other.
+    if ssh -q ${HOSTNAME}  'cat /etc/release 2>/dev/null | grep -qi 'solaris''
+    then
+    CORE_EXIT=0
+    elif ssh -q ${HOSTNAME} 'lsb_release -a' | grep -i 'Description' | grep -qEi 'centos|oracle linux'
+    then
+    CORE_EXIT=1
+    else
+    CORE_EXIT=5
+    fi
+}
+
+
+spec_the_thing()
+{
+    rsync -r ${config[dotdir]} ${HOSTNAME}:~/${USER}_${config[dotdir]} &&\
+    ssh ${HOSTNAME} -t "bash --rcfile ${config[dotrc]}" || echo -e "\e[31mFailed to SSH or Rsync to system!\e[m"
+}
+
+if $(exit ${config[soscheck]})
+then 
+    spec_oscheck
+    if [[ CORE_EXIT == 0 ]]
+    then
+        echo "System is Solaris, default SSH being used"
+        ssh ${HOSTNAME}
+    elif 
+
+
+ # rsync -r ~/dotfiles/rsfiles ${HOSTNAME}:~/ &&\
+ # ssh ${HOSTNAME} -t 'bash --rcfile ./rsfiles/.rsrc' || echo -e "\e[31mCould Not SSH Into ${HOSTNAME}!\e[m"
+####^ the above starts the ssh session using the rsynced files as the bashrc... need to figure out the variables to get Vim working the way I want it.
+#        
+#        #prevent 's' from removing dot files if still logged in
+#        parallel_lines
+#        PL_STATUS=$?
+#
+#        if ! $(exit ${PL_STATUS})
+#        then
+#            rem_dotfiles #Clean up after ourselves
+#            STATUS=$?
+#        else
+#            echo "Still logged into server elsewhere. Either remove files manually or log out of other instances of S on ${HOSTNAME}!"
+#            STATUS=1
+#            exit 5
+#        fi
+#
+#        if  $(exit ${STATUS}) # https://stackoverflow.com/questions/5431909/returning-a-boolean-from-a-bash-function/43840545#43840545 
+#        then 
+#            echo -e "\e[1;32mSuccessfully Removed rsfiles\e[m" 
+#        else 
+#            rem_dotfiles
+#            STATUS=$?
+#            if $(exit ${STATUS})
+#            then
+#                echo -e "\e[33mSuccessfully removed dotfiles after second attempt\e[m"
+#            else
+#                echo -e "\e[31mFailed to remove dotfiles after second attempt\e[m"
+#            fi    
+#        fi
+#    elif [[ ${CORE_EXIT} == 0 ]] 
+#    then
+#        echo "System is Solaris, no Rsync for compatability"
+#        ssh ${HOSTNAME}
+#    else
+#        echo "Unable to determine host OS, no rsync for compatability"
+#        ssh ${HOSTNAME}
+#    fi
+#fi
+
+
+
+core()
+{
+   case ${SOSCHECK} in 
+    1)
+        spec_oscheck
+        ;;
+    0)
+        spec_noscheck
+        ;;
+    esac
+}
