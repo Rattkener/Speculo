@@ -3,9 +3,9 @@ declare -A config #initialize associated array (keys can be anything)
 config=(
     [dotdir]="~/dotfiles/"
     [dotrc]="${config[dotdir]}/.bashrc"
-    [soscheck]="0"
+    [soscheck]="1"
     [sonoclean]="0"
-    [soconf]="./speculo.conf"
+    [soconf]="~/speculo.conf"
 )
 
 HOSTNAME=${1}    
@@ -26,6 +26,7 @@ if [[ ! $@ =~ \ -c\ && -e "${config[soconf]}" ]] # If -c isn't specified anywher
 then
     so_config_parse 
 fi
+
 
 
 
@@ -50,7 +51,7 @@ EOF
 }
 
 #Define options to be used with command
-while getopts ':h:c:d:r:nlo' OPTION
+while getopts ':h:c:d:r:no' OPTION
 do
         case $OPTION in
         c)      ${config[soconf]}=${OPTARG}
@@ -64,7 +65,7 @@ do
                 ;;
         n)      ${config[sonoclean]}=1
                 ;;
-        o)      ${config[soscheck]}=1
+        o)      ${config[soscheck]}=0
                 ;;
         ?)      plzhlp
                 exit 3
@@ -95,6 +96,7 @@ rem_routine()
     then
         echo "Files removed!"
     elif rem_dotfiles
+    then
         echo "Files removed after 2 tries."
     else
         echo "Could not remove dot files, please manually clean up"
@@ -133,7 +135,7 @@ then
         ssh ${HOSTNAME}
    
     elif [[ CORE_EXIT == 1 ]]
-        
+    then    
         echo "System is CentOS or Oracle Linux, rsync starting..."
         spec_the_thing &&\
         
@@ -163,6 +165,5 @@ else
             echo "Still logged in to ${HOSTNAME} elsewhere using ${0}, please log out and/or clean up manually!"
         fi
     fi
-fi
 fi
 
