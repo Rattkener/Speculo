@@ -49,7 +49,7 @@ EOF
 }
 
 #Define options to be used with command
-while getopts ':h:c:d:r:no' OPTION
+while getopts ':h:c:d:r:novi' OPTION
 do
         case $OPTION in
         c)      config[soconf]=${OPTARG}
@@ -64,6 +64,10 @@ do
         n)      config[sonoclean]=1
                 ;;
         o)      config[soscheck]=0
+                ;;
+        v)      remfiles_only=1
+                ;;
+        i)      initfiles=1
                 ;;
         ?)      plzhlp
                 exit 3
@@ -86,7 +90,7 @@ parallel_lines()
 
 rem_dotfiles()
 {
-        ssh ${SPEC_HOSTNAME} -qt "rm -r ${spec_DEST}"
+        ssh ${SPEC_HOSTNAME} -qt "rm -r ~/${spec_DEST}"
 }
 
 rem_routine()
@@ -100,6 +104,23 @@ rem_routine()
         else
             echo "Could not remove dot files, please manually clean up"
         fi
+}
+
+generate_source()
+{
+    echo " Creating Dotfiles directory"
+    mkdir -p ${config[dotdir]}
+    echo " Coping Dotfiles"
+    cp ${HOME}/.bashrc ${config[dotdir]}
+    cp ${HOME}/.bash_profile ${config[dotdir]}
+    
+}
+
+
+cleanup_dest()
+{
+    echo " Cleaning up destination directory"
+    rem_routine
 }
 
 spec_oscheck()
@@ -125,6 +146,22 @@ spec_the_thing()
     ssh ${SPEC_HOSTNAME} -t "bash --rcfile ${spec_DEST}${config[dotrc]}" || echo -e "\e[31mFailed to SSH or Rsync to system!\e[m"
 }
 
+
+if ! $(exit ${remfiles_only})
+then
+    cleanup_dest
+    exit
+fi
+    
+if ! $(exit ${initfiles})
+then
+    generate_source
+    exit
+fi
+
+
+
+
 if $(exit ${config[soscheck]})
 then 
     spec_oscheck
@@ -145,7 +182,6 @@ then
             then
                 rem_routine
             else
-                echo "$?"
                 echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
             fi    
         fi
@@ -163,7 +199,6 @@ else
         then
             rem_routine
         else
-            echo "$?"
             echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
         fi
     fi
