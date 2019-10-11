@@ -1,11 +1,12 @@
 #!/bin/bash
+myname=$(basename  "$0")
 declare -A config #initialize associated array (keys can be anything)
 config=(
     [dotdir]="${HOME}/dotfiles/"
     [dotrc]="${config[dotdir]}/.bashrc"
     [soscheck]="1"
     [sonoclean]="0"
-    [soconf]="~/speculo.conf"
+    [soconf]="${HOME}/speculo.conf"
 )
 
 SPEC_HOSTNAME=${1}    
@@ -27,14 +28,11 @@ then
     so_config_parse 
 fi
 
-
-
-
 plzhlp()
 {
     cat <<EOF
-    ${0} - Usage: 
-    ${0} [-h] SPEC_HOSTNAME [-c config.file] [-d dotfiles_dir] [-r ./rc_file] [-no]
+    ${myname} - Usage: 
+    ${myname} [-h] SPEC_HOSTNAME [-c config.file] [-d dotfiles_dir] [-r ./rc_file] [-no]
         -c      Specify a different config file.  default: ./speculo.conf
         
         -h      Specify Hostname. If -h isn't supplied the FIRST positional argument is used
@@ -54,18 +52,18 @@ EOF
 while getopts ':h:c:d:r:no' OPTION
 do
         case $OPTION in
-        c)      ${config[soconf]}=${OPTARG}
+        c)      config[soconf]=${OPTARG}
                 so_config_parse
                 ;;
         h)      SPEC_HOSTNAME=${OPTARG}
                 ;;
-        d)      ${config[dotdir]}=${OPTARG}
+        d)      config[dotdir]=${OPTARG}
                 ;;
-        r)      ${config[dotrc]}=${OPTARG}
+        r)      config[dotrc]=${OPTARG}
                 ;;
-        n)      ${config[sonoclean]}=1
+        n)      config[sonoclean]=1
                 ;;
-        o)      ${config[soscheck]}=0
+        o)      config[soscheck]=0
                 ;;
         ?)      plzhlp
                 exit 3
@@ -146,7 +144,7 @@ then
             then
                 rem_routine
             else
-                echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${0}, please log out and/or clean up manually!"
+                echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
             fi    
         fi
 
@@ -163,7 +161,7 @@ else
         then
             rem_routine
         else
-            echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${0}, please log out and/or clean up manually!"
+            echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
         fi
     fi
 fi
