@@ -75,17 +75,18 @@ do
         esac
 done
 
-
+spec_source="${config[dotdir]}"
+spec_DEST="${USER}_$(basename ${config[dotdir]})"
 
 parallel_lines()
 {
-    pgrep -a $0 -u ${USER} | grep ${SPEC_HOSTNAME} | grep -qv $$
+    pgrep -a ${myname} -u ${USER} | grep -v $$ | grep ${SPEC_HOSTNAME} 
 }
 
 
 rem_dotfiles()
 {
-        ssh ${SPEC_HOSTNAME} -qt 'rm -r ${config[dotdir]}'
+        ssh ${SPEC_HOSTNAME} -qt "rm -r ${spec_DEST}"
 }
 
 rem_routine()
@@ -114,13 +115,13 @@ spec_oscheck()
         CORE_EXIT=5
         fi
 }
-spec_source="${config[dotdir]}"
-spec_DEST="${USER}_$(basename ${config[dotdir]})"
+
+
 ### Rsync command 
 spec_the_thing()
 {
     
-    rsync  -vv -r "${spec_source}" "${SPEC_HOSTNAME}":~/"${spec_DEST}"/ &&\
+    rsync   -r "${spec_source}" "${SPEC_HOSTNAME}":~/"${spec_DEST}"/ &&\
     ssh ${SPEC_HOSTNAME} -t "bash --rcfile ${spec_DEST}${config[dotrc]}" || echo -e "\e[31mFailed to SSH or Rsync to system!\e[m"
 }
 
@@ -140,10 +141,11 @@ then
         
         if [[ ${config[sonoclean]} == 0 ]]
         then
-            if parallel_lines
+            if ! parallel_lines
             then
                 rem_routine
             else
+                echo "$?"
                 echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
             fi    
         fi
@@ -157,10 +159,11 @@ else
 
     if $( exit ${config[sonoclean]})
     then
-        if parallel_lines
+        if ! parallel_lines
         then
             rem_routine
         else
+            echo "$?"
             echo "Still logged in to ${SPEC_HOSTNAME} elsewhere using ${myname}, please log out and/or clean up manually!"
         fi
     fi
